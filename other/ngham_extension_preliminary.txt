@@ -1,0 +1,55 @@
+Activated by setting bit 5 in the NGHam header.
+The first payload byte should then be a type byte, then a byte describing the length of the data of the given type follows.
+Multple types of data can be fitted inside a NGHam packet, by starting with a new type and length byte after the previous data.
+
+Extension data types:
+
+0x00 Binary data of unknown type
+0x01 Address
+0x02 Statistics
+0x03 Statistics for timing reference
+0x04 Position
+0x05 Voice
+0x06 JPEG image
+
+** Address **
+Size is 6-17 B - eg. LA3JPA to broadcast will be 10 B, LA1K to broadcast is 8B, LA1K123Y to LA1K100Y is 17B
+ * 2-7B source: 4 bit LEN (1-8), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
+ * 1-7B destination: 4 bit LEN (0-8, 0=broadcast), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
+ * 1B sequence number
+ * 1B extended fields, packet type:
+     1b hopping_field_en
+     1b timeslot_field_en
+     1b connected_field_en
+     5b data_type: 0=other data, 1=voice, 2=short position, 3=long position (diagnostic with full path and comment), 4=collision report
+ * 1B hopping: 1b reserved, 1b add_path_trace, 1b fill_in_hop_finished, 1b fill_in_hop_left, 2b hops_finished, 2b hops_left
+     If path_trace_en is set, fill_in_hops_finished+hops_finished callsigns follow (maximum 4):
+     2-7B: 4 bit LEN (1-8), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
+ * 2B timeslot information: 4 b timeslot modulo (transmits every 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024), 12b first timeslot
+ * 1B connected mode information: 0=cts, 1=rts, 2=ack, 3=nack
+
+Collision pakke foreslår ny timeslot med samme intervall (hvis mulig)
+Alle pakker har samme lengde, så ingen long position
+Rts, cts, ack, nack, sequence
+Radix 36 (5.17 bit) Eller 6 bit adresse?
+
+** Position **
+Always used with broadcast header, so maximum header size is 11 B.
+Wait one full timeslot period to generate adress book, then picks random free timeslot
+A collision packet (TBD) is transmitted to make station move to another timeslot. If no other option, stay on the same timeslot.
+A timeslot is considered free again if not used for 3 periods.
+ * 4 B latitude
+ * 4 B longitude
+ * 3 B altitude
+ * 3 B speed and heading: 14b speed, 10b heading
+
+** Voice **
+ * 42B voice (7x6B 2400bps Codec2 frames, 140 ms of voice)
+Takes less than 140 ms to transmit at 4800 baud. Will fit in 60 B payload size with 1 B to 12 B padding.
+
+- SOTDMA og MACA
+
+ * timeslot-almanac
+ * Comment
+ * Icon
+( * 2B timeslot information: 12b first timeslot, 4 b timeslot modulo (transmits every 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024) )
