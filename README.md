@@ -7,13 +7,15 @@ NGHam, short for Next Generation Ham Radio, is a set of protocols for packet rad
 - NGHam extensions - a modular extension using the payload for addressing, position, voice, statistics etc.
 
 Main features:
-**Very robust:** Allows decoding with lower SNR compared to 1200 baud AFSK AX.25 due to the use of a sync word with good autocorrelation properties and Reed Solomon FEC over the whole remaining packet.
-**High throughput:** As the sync word eliminates the need for a long preamble and FEC increases chance of successful packet reception, the throughput will be higher than for 9600 baud AX.25.
-**Better spectral efficiency:** Significantly better spectral efficiency than 1200 baud AFSK, and somewhat better than 9600 baud G3RUH modulation due to the reduced deviation.
-**More efficient channel access:** CSMA is the default access method, but TDMA with automatic time-synchronization is being developed and is tested.
-**Clear distinction between communication layers:** The NGHam radio protocol has no addressing or other higher level information, and can be used without NGHam extensions.
+
+- **Very robust:** Allows decoding with lower SNR compared to 1200 baud AFSK AX.25 due to the use of a sync word with good autocorrelation properties and Reed Solomon FEC over the whole remaining packet.
+- **High throughput:** As the sync word eliminates the need for a long preamble and FEC increases chance of successful packet reception, the throughput will be higher than for 9600 baud AX.25.
+- **Better spectral efficiency:** Significantly better spectral efficiency than 1200 baud AFSK, and somewhat better than 9600 baud G3RUH modulation due to the reduced deviation.
+- **More efficient channel access:** CSMA is the default access method, but TDMA with automatic time-synchronization is being developed and is tested.
+- **Clear distinction between communication layers:** The NGHam radio protocol has no addressing or other higher level information, and can be used without NGHam extensions.
 
 [Youtube video: NGHam demonstration with Owl VHF and TDMA](http://youtu.be/_96td-Y-LLA)
+
 
 ![NGHam radio protocol block schematic](https://github.com/skagmo/ngham/blob/master/other/illustrations/ngham_block_v3.png?raw=true)
 
