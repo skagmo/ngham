@@ -18,22 +18,25 @@
 #define TEMP_NA				-128
 #define VOLT_NA				0
 
+#define TOW_VAL_bm	0xf0000000
+#define UPTIME_S_bm 0x0fffffff
+#define TOW_VAL_bp	28
+
 // Statistics packet
 typedef struct __attribute__ ((packed)){
-	uint16_t hw_ver;		// 10b company, 6b product
-	uint16_t serial;		// Serial nr.
-	uint16_t sw_ver;		// 4b major, 4b minor, 8b build
-	uint32_t uptime_s;		// In whole seconds since startup
-	uint32_t tow_ms;		// Time of week in milliseconds
-	uint8_t tow_source;		// Timing source. 0=None, 1=Remote, 2=Remote w/GNSS, 3=GNSS
-    uint8_t voltage;		// Input voltage in desivolts (0-25.5)
-    int8_t temp;			// System temp in deg. celsius (-128 to 127)
-	uint8_t signal;			// Received signal strength in dBm - 200, -200 to 55
-    uint8_t noise;			// Noise floor in dBm - 200, -200 to 55
-    uint16_t cntr_rx_ok;	// Packets successfully received
-    uint16_t cntr_rx_fix;	// Packets with corrected errors
-	uint16_t cntr_rx_err;	// Packets with uncorrectable errors
-    uint16_t cntr_tx;		// Packets sent
+	uint16_t hw_ver;			// 10b company, 6b product
+	uint16_t serial;			// Serial nr.
+	uint16_t sw_ver;			// 4b major, 4b minor, 8b build
+	uint32_t tow_ms;			// Time of week in milliseconds
+	uint32_t tow_val_uptime_s;	// b31-b28: TOW validity, b27-b0: Time in whole seconds since startup
+    uint8_t voltage;			// Input voltage in desivolts (0-25.5)
+    int8_t temp;				// System temp in deg. celsius (-128 to 127)
+	uint8_t signal;				// Received signal strength in dBm - 200, -200 to 55
+    uint8_t noise;				// Noise floor in dBm - 200, -200 to 55
+    uint16_t cntr_rx_ok;		// Packets successfully received
+    uint16_t cntr_rx_fix;		// Packets with corrected errors
+	uint16_t cntr_rx_err;		// Packets with uncorrectable errors
+    uint16_t cntr_tx;			// Packets sent
 }ngham_statistics_t;
 
 #endif

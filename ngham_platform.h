@@ -8,7 +8,8 @@
 // Temporary buffer for the decoder, rx packet variable and state variable.
 // Define in ngham_platform.c. The only reason these are here and
 // not in ngham.c is because they might be defined elsewhere in your application
-// and you want to reuse them.
+// and you want to reuse them. 
+// If this doesn't apply to you, copy this to ngham_platform.c with "extern" removed.
 extern uint8_t rx_buf[];	// Should hold the largest packet - ie. 255 B
 extern uint16_t rx_buf_len;
 extern rx_pkt_t rx_pkt;
@@ -28,6 +29,18 @@ uint8_t ngham_action_get_noise_floor(void);
 
 // Will always be called after packet reception is finished - whether it was successful or not.
 // This function should also handle reinitialization of your decoder/sync word detector.
+// Typically start this with:
+// switch (condition){
+// 	case PKT_CONDITION_OK:
+// 		// Do something with data
+// 		break;
+// 	case PKT_CONDITION_FAIL:
+// 		// Count as a fail
+// 		break;
+// 	case PKT_CONDITION_PREFAIL:
+// 		// Count as error and prepare for new sync word immediately
+// 		break;
+// }
 void ngham_action_handle_packet(uint8_t condition, rx_pkt_t* p);
 
 // Not required: Code to be executed when reception has just started.
