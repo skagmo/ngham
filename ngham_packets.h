@@ -27,22 +27,32 @@
 // If the following flag is set in a packet, NGHam extensions are used and first byte is type
 #define NGHAM_FLAG_TYPE_EXTENSION	0x01
 
-typedef struct{
-	uint16_t pl_len;
-	uint8_t pl[PKT_PL_SIZE];
-	uint8_t ngham_flags;
-	uint8_t rssi;			// In dBm + 200
-	uint8_t noise;			// Same as above
-	uint8_t errors;			// Recovered symbols
+#define SPP_PL_MAX 512
+
+typedef struct __attribute__ ((packed)){
 	uint32_t timestamp;		// Time stamp of sync word detection
+	uint16_t pl_len;
+	uint8_t noise;			// Same as above
+	uint8_t rssi;			// In dBm + 200
+	uint8_t errors;			// Recovered symbols
+	uint8_t ngham_flags;
+	uint8_t pl[PKT_PL_SIZE];
 }rx_pkt_t;
 
-typedef struct{
+typedef struct __attribute__ ((packed)){
 	uint16_t pl_len;
-	uint8_t pl[PKT_PL_SIZE];
-	uint8_t ngham_flags;
 	uint8_t priority;
+	uint8_t ngham_flags;
+	uint8_t pl[PKT_PL_SIZE];
 }tx_pkt_t;
+
+// NGHam SPP header
+typedef struct __attribute__ ((packed)){
+	uint8_t start;
+	uint16_t crc;
+	uint8_t pl_type;
+	uint8_t pl_len;
+}ngh_spphdr_t;
 
 void rx_pkt_init(rx_pkt_t *p);
 void tx_pkt_init(tx_pkt_t *p);

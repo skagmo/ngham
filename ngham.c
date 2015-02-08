@@ -5,14 +5,17 @@
 
 #include "ngham.h"
 
-#include "fec-3.0.1/char.h"			// Reed Solomon code from Phil Karn
-#include "fec-3.0.1/rs-common.h"
+#include "fec-3.0.1/fec.h"			// RS code from Phil Karn
+#include "fec-3.0.1/char.h"			// RS code specific to 8-bit symbol size
+#include "fec-3.0.1/rs-common.h"	// RS control block struct
 #include <stddef.h>					// For NULL etc.
 #include <string.h>					// For memcpy
 #include "ccsds_scrambler.h"		// Pre-generated array from scrambling polynomial
 #include "ngham_packets.h"			// Structs for TX and RX packets
 #include "crc_ccitt.h"
-#include "ngham_platform.h"				// CRC-code
+
+#include "ngham_paths.h"
+#include PATH_NGHAM_PLATFORM
 
 // There are seven different sizes.
 // Each size has a correlation tag for size, a total size, a maximum payload size and a parity data size.
@@ -141,7 +144,7 @@ void ngham_decode(uint8_t d){
 	static uint32_t size_tag;
 
 	switch (decoder_state){
-
+		
 		case NGH_STATE_SIZE_TAG:
 			size_tag = 0;
 			ngham_action_reception_started();

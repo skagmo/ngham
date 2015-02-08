@@ -23,26 +23,30 @@ Content:
 
 | File/folder       | Description |
 |:-----------       |:----------- |
+| documentation/    | More documentation. |
 | fec-3.0.1/        | FEC library by Phil Karn for Reed Solomon. (http://www.ka9q.net/code/fec/) |
-| other/            | More documentation. |
+| platform/         | User provided - MUST BE CUSTOMIZED. |
+| ccsds_scrambler.h | Pre-generated array from scrambling polynomial. |
+| crc_ccitt.h       | CRC-code used in NGHam. |
 | ngham.h           | The main NGHam encoder/decoder functions. |
 | ngham_packets.h   | Declarations of the TX/RX packet structs etc. |
-| ngham_platform.h  | User provided code - MUST BE CUSTOMIZED. |
-| crc_ccitt.h       | CRC-code used in NGHam. |
-| ccsds_scrambler.h | Pre-generated array from scrambling polynomial. |
+| ngham_paths.h     | User provided - MUST BE CUSTOMIZED. |
+| ngham_spp.h       | Serial port protocol for communication with the host.  |
+| ngham_spp_test.py | Python code for NGHAM SPP communication. |
+
 
 Not finished:
 
 | File/folder       | Description |
 |:-----------       |:----------- |
 | ngham_extensions.h        | An extension of the payload field in the NGHam radio protocol (enabled by a flag in the NGHam header).  |
-| ngham_spp.h            | Serial port protocol for communication with the host.  |
 
-Usage:
+Usage (for NGHam RF protocol):
 
 1. Provide your own sync word correlator and GMSK (de)modulator. 
 2. The demodulator should start outputting data only after sync word is detected.
-3. ngham_platform.h/c must be customized for the platform you are using.
+3. Build all files in the root except "ngham_spp.c". From the folder "fec-3.0.1", build "decode_rs_char.c", "encode_rs_char.c" and "init_rs_char.c".
+3. "ngham_paths.h" and the code in "platform/" must be customized.
 
 ```
 // Initialize Reed Solomon arrays - only do this once!

@@ -4,28 +4,27 @@ Multple types of data can be fitted inside a NGHam packet, by starting with a ne
 
 Extension data types:
 0x00 Binary data of unknown type
-0x01 Address
+0x01 Ham address - everything after an adress belongs to the transmitting station
 0x02 Statistics
 0x03 Statistics for timing reference
 0x04 Position
 0x05 Voice
 0x06 JPEG image
+0x07 Repeated ham adress (originates from another station)
 
 ** Address **
-Size is 6-17 B - eg. LA3JPA to broadcast will be 10 B, LA1K to broadcast is 8B, LA1K123Y to LA1K100Y is 17B
- * 2-7B source: 4 bit LEN (1-8), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
- * 1-7B destination: 4 bit LEN (0-8, 0=broadcast), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
+Size is 6-17 B - eg. LA3JPA to broadcast will be 8B, LA1K to broadcast is 6B, LA1K123Y to LA1K100Y is 16B
+ * 2-7B mycall: 4 bit LEN (1-8), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
  * 1B sequence number
- * 1B extended fields, packet type:
+ * 1B fields, packet type:
+     1b destcall_en - if this is not a broadcast packet, insert destination callsign
      1b hopping_field_en
      1b timeslot_field_en
      1b connected_field_en
- * 1B hopping: 1b reserved, 1b add_path_trace, 1b fill_in_hop_finished, 1b fill_in_hop_left, 2b hops_finished, 2b hops_left
-     If path_trace_en is set, fill_in_hops_finished+hops_finished callsigns follow (maximum 4):
-     2-7B: 4 bit LEN (1-8), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
+ * 1-7B destcall: 4 bit LEN (1-8), 4 bit SSID, LEN x 6 bit (chars), fill to n*8 - LA3JPA-3
+ * 1B hopping: 2b reserved, 1b fill_in_hop_finished, 1b fill_in_hop_total, 2b hops_finished, 2b hops_total (not including fill-in)
  * 2B timeslot information
  * 1B connected mode information: 0=cts, 1=rts, 2=ack, 3=nack
-
 
 ** Position **
 If address is enabled, use broadcast. Address size will therefore be 11 B.
@@ -47,3 +46,9 @@ Takes less than 140 ms to transmit at 4800 baud. Will fit in 60 B payload size w
  * Comment
  * Icon
 ( * 2B timeslot information: 12b first timeslot, 4 b timeslot modulo (transmits every 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024) )
+
+
+Repeated packet:
+Address
+Repeated address
+Position
