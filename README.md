@@ -17,7 +17,7 @@ Main features:
 [Youtube video: NGHam demonstration with Owl VHF and TDMA](http://youtu.be/_96td-Y-LLA)
 
 
-![NGHam radio protocol block schematic](https://github.com/skagmo/ngham/blob/master/other/illustrations/ngham_block_v3.png?raw=true)
+![NGHam radio protocol block schematic](https://github.com/skagmo/ngham/blob/master/documentation/illustrations/ngham_block_v3.png?raw=true)
 
 Content:
 
