@@ -50,6 +50,8 @@ const uint32_t NGH_SIZE_TAG[] = {
 // Preamble and synchronization vector
 const uint8_t NGH_PREAMBLE = 0xAA;
 const uint8_t NGH_SYNC[] = {0x5D, 0xE6, 0x2A, 0x7E};
+const uint8_t NGH_PREAMBLE_FOUR_LEVEL = 0xDD;
+const uint8_t NGH_SYNC_FOUR_LEVEL[] = {0x77, 0xf7, 0xfd, 0x7d, 0x5d, 0xdd, 0x7f, 0xfd};
 
 // Reed Solomon control blocks for the different NGHAM sizes
 struct rs rs_cb[NGH_SIZES];
@@ -107,14 +109,23 @@ void ngham_encode(tx_pkt_t* p){
 	uint8_t size_nr = 0;
 	uint8_t d[NGH_MAX_TOT_SIZE];
 	uint16_t d_len = 0;
+	uint8_t codeword_start;
 
 	// Check size and find control block for smallest possible RS codeword
 	if ((p->pl_len == 0) || (p->pl_len > NGH_PL_SIZE[NGH_SIZES-1])) return;
 	while (p->pl_len > NGH_PL_SIZE[size_nr]) size_nr++;
 
 	// Insert preamble, sync and size-tag
-	for (j=0; j<NGH_PREAMBLE_SIZE; j++) d[d_len++] = NGH_PREAMBLE;
-	for (j=0; j<NGH_SYNC_SIZE; j++) d[d_len++] = NGH_SYNC[j];
+	if (NGHAM_FOUR_LEVEL_MODULATION){
+		codeword_start = NGH_PREAMBLE_SIZE_FOUR_LEVEL+NGH_SYNC_SIZE_FOUR_LEVEL+NGH_SIZE_TAG_SIZE;
+		for (j=0; j<NGH_PREAMBLE_SIZE_FOUR_LEVEL; j++) d[d_len++] = NGH_PREAMBLE_FOUR_LEVEL;
+		for (j=0; j<NGH_SYNC_SIZE_FOUR_LEVEL; j++) d[d_len++] = NGH_SYNC_FOUR_LEVEL[j];
+	}
+	else{
+		codeword_start = NGH_PREAMBLE_SIZE+NGH_SYNC_SIZE+NGH_SIZE_TAG_SIZE;
+		for (j=0; j<NGH_PREAMBLE_SIZE; j++) d[d_len++] = NGH_PREAMBLE;
+		for (j=0; j<NGH_SYNC_SIZE; j++) d[d_len++] = NGH_SYNC[j];
+	}
 	d[d_len++] = (NGH_SIZE_TAG[size_nr] >> 16) & 0xff;
 	d[d_len++] = (NGH_SIZE_TAG[size_nr] >> 8) & 0xff;
 	d[d_len++] = NGH_SIZE_TAG[size_nr] & 0xff;
@@ -124,17 +135,17 @@ void ngham_encode(tx_pkt_t* p){
 	d[d_len] |= (p->ngham_flags << 5) & 0xe0;				// Insert flags
 	d_len++;
 	for (j=0; j<p->pl_len; j++) d[d_len++] = p->pl[j];		// Insert data
-	crc = crc_ccitt(&d[NGH_CODEWORD_START], p->pl_len+1);	// Insert CRC
+	crc = crc_ccitt(&d[codeword_start], p->pl_len+1);	// Insert CRC
 	d[d_len++] = (crc >> 8) & 0xff;
 	d[d_len++] = crc & 0xff;
 	for (j=p->pl_len+3; j<NGH_PL_SIZE_FULL[size_nr]; j++) d[d_len++] = 0;	// Insert padding
 	
 	// Generate parity data
-	encode_rs_char(&rs_cb[size_nr], &d[NGH_CODEWORD_START], &d[d_len]);
+	encode_rs_char(&rs_cb[size_nr], &d[codeword_start], &d[d_len]);
 	d_len += NGH_PAR_SIZE[size_nr];
 
 	// Scramble
-	for (j=0; j<NGH_PL_PAR_SIZE[size_nr]; j++) d[NGH_CODEWORD_START+j] ^= ccsds_poly[j];
+	for (j=0; j<NGH_PL_PAR_SIZE[size_nr]; j++) d[codeword_start+j] ^= ccsds_poly[j];
 
 	ngham_action_send_data(d, d_len, p->priority);
 }

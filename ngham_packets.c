@@ -6,7 +6,7 @@ void rx_pkt_init(rx_pkt_t *p){
 	p->rssi = RSSI_NA;
 	p->noise = RSSI_NA;
 	p->errors = 0;
-	p->timestamp = TIMESTAMP_NA;
+	p->timestamp_toh_us = TIMESTAMP_NA;
 }
 
 void tx_pkt_init(tx_pkt_t *p){

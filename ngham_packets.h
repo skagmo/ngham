@@ -18,25 +18,25 @@
 #define PKT_PRIORITY_FIRST_IN_SLOT	10	// Should be put first in the next time slot for timing purposes
 
 // Size of payload in packet struct
-#define PKT_PL_SIZE	256
+#define PKT_PL_SIZE 512
 
 // Basic "not available"-values
-#define RSSI_NA				0
-#define TIMESTAMP_NA		0 // TODO: Can actually be a valid time stamp
+#define RSSI_NA				0xff
+#define TIMESTAMP_NA		0xffffffff
 
 // If the following flag is set in a packet, NGHam extensions are used and first byte is type
 #define NGHAM_FLAG_TYPE_EXTENSION	0x01
 
-#define SPP_PL_MAX 512
+#define SPP_PL_MAX 256	// Should be a power of two to allow ring buffers!
 
 typedef struct __attribute__ ((packed)){
-	uint32_t timestamp;		// Time stamp of sync word detection
-	uint16_t pl_len;
+	uint32_t timestamp_toh_us;		// Time stamp of sync word detection
 	uint8_t noise;			// Same as above
 	uint8_t rssi;			// In dBm + 200
 	uint8_t errors;			// Recovered symbols
 	uint8_t ngham_flags;
 	uint8_t pl[PKT_PL_SIZE];
+	uint16_t pl_len;
 }rx_pkt_t;
 
 typedef struct __attribute__ ((packed)){
