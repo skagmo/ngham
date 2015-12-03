@@ -1,30 +1,28 @@
 //**************************************************************//
 // NGHam protocol - Jon Petter Skagmo, LA3JPA, 2014.            //
 // Licensed under LGPL.                                         //
+// This is made somewhat platform specific for the Owl VHF      //
+// with serial port contexts, and is meant as an guidance.      //
 //**************************************************************//
 
 #include "ngham_spp.h"
-
-#include "ngham_packets.h"
 #include "crc_ccitt.h"
+#include <string.h> // For memcpy
+
+// Definition of port context port_ctx_t and port_* functions,
+// as well as packer_call which sends data to transmit chain
 #include "ngham_paths.h"
 #include PATH_NGHAM_PLATFORM_SPP
 
-// Include your command interpreter here, if you have one.
-#include PATH_OWL_CMD_INTERPRETER
+// Packet start byte definition
+#define SPP_START			0x24	
 
-#define SPP_START			0x24	// Packet start byte definition
-
-#define SPP_STATE_START 	0x00	// States
+// States
+#define SPP_STATE_START 	0x00	
 #define SPP_STATE_HEADER	0x01
 #define SPP_STATE_PAYLOAD	0x02
 
-#define SPP_TYPE_RX			0x00	// Packet types
-#define SPP_TYPE_TX			0x01	// Packet types
-#define SPP_TYPE_LOCAL		0x02
-#define SPP_TYPE_CMD		0x03
-
-void ngham_pack_byte(port_ctx_t* ctx, uint8_t c){
+void ngham_parse_byte(port_ctx_t* ctx, uint8_t c){
 	switch(ctx->state){
 		case SPP_STATE_START:
 			if (c == SPP_START){
@@ -34,89 +32,111 @@ void ngham_pack_byte(port_ctx_t* ctx, uint8_t c){
 			break;
 			
 		case SPP_STATE_HEADER:
-			((uint8_t*)&ctx->ngh_spp)[ctx->d_ip++] = c;	// Fill header
-			if (ctx->d_ip >= sizeof(ngh_spphdr_t)){
-				ctx->d_ip = 0;
+			// Fill ctx->d with header - no check for size, as buffer is much larger than header (5B)
+			ctx->d[ctx->d_ip++] = c;
+			
+			if (ctx->d_ip >= sizeof(ngh_spphdr_t)){		
+				// Target length in d_op
+				ctx->d_op = sizeof(ngh_spphdr_t) + ((ngh_spphdr_t*)ctx->d)->pl_len;
 				ctx->state = SPP_STATE_PAYLOAD;
 			}
 			break;
 			
 		case SPP_STATE_PAYLOAD:
-			if (ctx->d_ip < PORT_BUF_SIZE) ctx->d[ctx->d_ip++] = c;	// Fill ctx->d with payload
-			if (ctx->d_ip >= ctx->ngh_spp.pl_len){
-				ctx->state = SPP_STATE_START;
+			// Fill ctx->d with payload
+			if (ctx->d_ip < PORT_BUF_SIZE) ctx->d[ctx->d_ip++] = c;
+			
+			// If received length has met target length (set in STATE_HEADER)
+			if (ctx->d_ip >= ctx->d_op){
+				ngh_spphdr_t* hdr = (ngh_spphdr_t*)ctx->d;
 
-				// Calc CRC of type, length and payload
-				int j;
-				uint16_t crc = 0xffff;
-				for (j=3; j<5; j++) crc = crc_ccitt_byte(((uint8_t*)&ctx->ngh_spp)[j], crc);
-				for (j=0; j<ctx->d_ip; j++) crc = crc_ccitt_byte(ctx->d[j], crc);
-				crc ^= 0xffff;
-				if (crc == ctx->ngh_spp.crc){
-					switch(ctx->ngh_spp.pl_type){
-						case SPP_TYPE_TX:
+				if (crc_ccitt(ctx->d+3, ctx->d_ip-3) == hdr->crc){
+					switch(hdr->pl_type){
+						
+						// Data to be sent
+						case NGHAM_SPP_TYPE_TX:
 							{
-								// Data to be sent
 								tx_pkt_t p;
 								tx_pkt_init(&p);
-								p.ngham_flags = ctx->d[0];	// First byte in NGH SPP RF type is flags
-								p.pl_len = ctx->d_ip-1;
-								for (j=0; j<p.pl_len; j++) p.pl[j] = ctx->d[j+1];
-								PACKER_CALL(&p);
+								
+								// Set flags, length (excluding flag-byte) and copy data
+								p.ngham_flags = ctx->d[sizeof(ngh_spphdr_t)];
+								p.pl_len = hdr->pl_len-1;
+								memcpy(p.pl, ctx->d+sizeof(ngh_spphdr_t)+1, p.pl_len);
+								
+								// Packer call define - this is where the TX-packets are sent
+								packer_call(&p);
+								
 								// TODO: Generate response!
 							}
 							break;
-						case SPP_TYPE_CMD:
+							
+						// Command
+						case NGHAM_SPP_TYPE_CMD:
 							{
 								uint8_t rep[REPLY_SIZE];	// CMD can be longer than SPP_PL_MAX
-								uint16_t rep_len = 0, rep_pos = 0;
-								cmd(ctx->d, ctx->ngh_spp.pl_len, rep, &rep_len, REPLY_SIZE);	// Run command
-
-								// Prepare response
-								ngh_spphdr_t hdr;
-								uint8_t r[sizeof(hdr)+SPP_PL_MAX];
-								hdr.start = SPP_START;
-								hdr.pl_type = SPP_TYPE_CMD;
-
-								while (rep_len){
-									if (rep_len > 255){
-										hdr.pl_len = 255;
-										rep_len -= 255;
-									}
-									else{
-										hdr.pl_len = rep_len;
-										rep_len = 0;
-									}
-									for (j=0; j<hdr.pl_len; j++) r[sizeof(hdr)+j] = rep[rep_pos++];
-									for (j=3; j<5; j++) r[j] = ((uint8_t*)&hdr)[j];		// Copy length and type into header
-									hdr.crc = crc_ccitt(&r[3], hdr.pl_len+2);			// Calc. CRC
-									for (j=0; j<3; j++) r[j] = ((uint8_t*)&hdr)[j];		// Copy CRC and stat into header
-									port_output(ctx, r, sizeof(hdr)+hdr.pl_len);		// Send to port
-								}
+								uint16_t rep_len = 0;
+								cmd(ctx->d+sizeof(ngh_spphdr_t), hdr->pl_len, rep, &rep_len, REPLY_SIZE);	// Run command
+								ngham_print_cmd(ctx, rep, rep_len);	// Send reply
 							}
 							break;
 					}
 				}
+				
+				ctx->state = SPP_STATE_START;
 			}
 			break;
 	}
 }
 
-void ngham_unpack(rx_pkt_t* p){
-	int j;
-	ngh_spphdr_t hdr;
-	hdr.start = SPP_START;
-	hdr.crc = 0xffff;
-	hdr.pl_type = SPP_TYPE_RX;
-	hdr.pl_len = p->pl_len+8;
-	uint8_t* p_u8 = (uint8_t*)p;
-	uint8_t* hdr_u8 = (uint8_t*)&hdr;
-	// Calc CRC
-	for (j=3; j<5; j++) hdr.crc = crc_ccitt_byte(hdr_u8[j], hdr.crc);
-	for (j=0; j<hdr.pl_len; j++) hdr.crc = crc_ccitt_byte(p_u8[j], hdr.crc);	// SPP-protocol must match with rx_pkt_t struct
-	hdr.crc ^= 0xffff;
+void ngham_spp_fill_header(ngh_spphdr_t* hdr, uint8_t type, uint8_t* d, uint16_t d_len){
+	uint16_t j, crc;
+	
+	hdr->start = SPP_START;
+	hdr->pl_type = type;
+	hdr->pl_len = d_len;
+	
+	crc = crc_ccitt_byte(hdr->pl_type, 0xffff);
+	crc = crc_ccitt_byte(hdr->pl_len, crc);
+	for (j=0; j<d_len; j++) crc = crc_ccitt_byte(d[j], crc);
+	crc ^= 0xffff;
+	
+	hdr->crc = crc;
+}
 
-	// Copy remaining and send to port
-	UNPACKER_CALL(PACKER_NGHAM, (uint8_t*)&hdr, sizeof(ngh_spphdr_t));
-	UNPACKER_CALL(PACKER_NGHAM, p_u8, hdr.pl_len);
+void ngham_print_cmd(port_ctx_t* ctx, uint8_t* d, uint16_t d_len){
+	ngh_spphdr_t hdr;
+	uint16_t shortened_len, offset = 0;
+	
+	// Split into multiple packets if necessary
+	while (d_len){
+		if (d_len > SPP_PL_MAX) shortened_len = SPP_PL_MAX;
+		else shortened_len = d_len;
+		
+		ngham_spp_fill_header(&hdr, NGHAM_SPP_TYPE_CMD, d+offset, shortened_len);
+		
+		// Copy remaining and send to port
+		port_output(ctx, (uint8_t*)&hdr, sizeof(ngh_spphdr_t));
+		port_output(ctx, d+offset, hdr.pl_len);
+		
+		d_len -= shortened_len;
+		offset += shortened_len;
+	}
+}
+
+// Output buffer should be prefilled with 
+void ngham_print_rx_pkt(rx_pkt_t* p){
+	ngh_spphdr_t hdr;
+	
+	ngham_spp_fill_header(&hdr, NGHAM_SPP_TYPE_RX, (uint8_t*)p, p->pl_len+8);
+	port_unpacker_output(PACKER_NGHAM, (uint8_t*)&hdr, sizeof(ngh_spphdr_t));
+	port_unpacker_output(PACKER_NGHAM, (uint8_t*)p, hdr.pl_len);
+}
+
+void ngham_pack_tx_pkt_local(tx_pkt_t* p){
+	ngh_spphdr_t hdr;
+	
+	ngham_spp_fill_header(&hdr, NGHAM_SPP_TYPE_LOCAL, (uint8_t*)&(p->ngham_flags), p->pl_len+1);
+	port_unpacker_output(PACKER_NGHAM, (uint8_t*)&hdr, sizeof(ngh_spphdr_t));
+	port_unpacker_output(PACKER_NGHAM, (uint8_t*)&(p->ngham_flags), hdr.pl_len);
 }

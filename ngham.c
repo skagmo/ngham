@@ -10,6 +10,7 @@
 #include "fec-3.0.1/rs-common.h"	// RS control block struct
 #include <stddef.h>					// For NULL etc.
 #include <string.h>					// For memcpy
+#include <stdlib.h>					// For free
 #include "ccsds_scrambler.h"		// Pre-generated array from scrambling polynomial
 #include "ngham_packets.h"			// Structs for TX and RX packets
 #include "crc_ccitt.h"
@@ -60,28 +61,29 @@ void ngham_init(void){
 	decoder_state = NGH_STATE_SIZE_TAG;
 }
 
-// Run only once - occupies space for reed solomon tables
+// Run only once - generates reed solomon tables for all 7 packet sizes
+// MM=8, genpoly=0x187, fcs=112, prim=11, nroots=32 or 16
 void ngham_init_arrays(void){
-	// Must be de-inited to release occupied space!
-	// MM=8, genpoly=0x187, fcs=112, prim=11, nroots=32 eller 16
-	struct rs* rs_32 = (void*)init_rs_char(8, 0x187, 112, 11, 32, 0);
-	memcpy ((void*)&rs_cb[6], (void*)rs_32, sizeof (rs_cb[6]));
-	memcpy ((void*)&rs_cb[5], (void*)rs_32, sizeof (rs_cb[5]));
-	memcpy ((void*)&rs_cb[4], (void*)rs_32, sizeof (rs_cb[4]));
-	memcpy ((void*)&rs_cb[3], (void*)rs_32, sizeof (rs_cb[3]));
-
+	unsigned int j;
+	
 	struct rs* rs_16 = (void*)init_rs_char(8, 0x187, 112, 11, 16, 0);
-	memcpy ((void*)&rs_cb[2], (void*)rs_16, sizeof (rs_cb[2]));
-	memcpy ((void*)&rs_cb[1], (void*)rs_16, sizeof (rs_cb[1]));
-	memcpy ((void*)&rs_cb[0], (void*)rs_16, sizeof (rs_cb[0]));
+	for (j=0; j<3; j++)
+		memcpy ((void*)&rs_cb[j], (void*)rs_16, sizeof (rs_cb[j]));
+	free(rs_16);
+	
+	struct rs* rs_32 = (void*)init_rs_char(8, 0x187, 112, 11, 32, 0);
+	for (; j<NGH_SIZES; j++)
+		memcpy ((void*)&rs_cb[j], (void*)rs_32, sizeof (rs_cb[j]));
+	free(rs_32);
 
-	rs_cb[6].pad = 255-NGH_PL_PAR_SIZE[6];
-	rs_cb[5].pad = 255-NGH_PL_PAR_SIZE[5];
-	rs_cb[4].pad = 255-NGH_PL_PAR_SIZE[4];
-	rs_cb[3].pad = 255-NGH_PL_PAR_SIZE[3];
-	rs_cb[2].pad = 255-NGH_PL_PAR_SIZE[2];
-	rs_cb[1].pad = 255-NGH_PL_PAR_SIZE[1];
-	rs_cb[0].pad = 255-NGH_PL_PAR_SIZE[0];
+	// Set padding size for each packet size
+	for (j=0; j<NGH_SIZES; j++)
+		rs_cb[j].pad = NGH_PL_PAR_SIZE[6]-NGH_PL_PAR_SIZE[j];
+}
+
+void ngham_deinit_arrays(void){
+	free_rs_char(&rs_cb[0]);	// Free memory for nroots = 16
+	free_rs_char(&rs_cb[3]); // Free memory for nroots = 32
 }
 
 // Used to check if hamming distance in size tag is smaller than treshold
@@ -110,7 +112,7 @@ void ngham_encode(tx_pkt_t* p){
 	uint8_t d[NGH_MAX_TOT_SIZE];
 	uint16_t d_len = 0;
 	uint8_t codeword_start;
-
+	
 	// Check size and find control block for smallest possible RS codeword
 	if ((p->pl_len == 0) || (p->pl_len > NGH_PL_SIZE[NGH_SIZES-1])) return;
 	while (p->pl_len > NGH_PL_SIZE[size_nr]) size_nr++;
@@ -153,7 +155,10 @@ void ngham_encode(tx_pkt_t* p){
 void ngham_decode(uint8_t d){
 	static uint8_t size_nr;
 	static uint32_t size_tag;
-
+	static unsigned int length;
+	// This points to the address one lower than the payload!
+	static uint8_t* buf = (uint8_t*)&rx_pkt.ngham_flags;
+	
 	switch (decoder_state){
 		
 		case NGH_STATE_SIZE_TAG:
@@ -170,13 +175,11 @@ void ngham_decode(uint8_t d){
 			size_tag <<= 8;
 			size_tag |= d;
 			{
-				uint8_t j;
-				for (j=0; j<NGH_SIZES; j++){
+				for (size_nr=0; size_nr<NGH_SIZES; size_nr++){
 					// If tag is intact, set known size
-					if (ngham_tag_check(size_tag, NGH_SIZE_TAG[j])){
-						size_nr = j;
+					if (ngham_tag_check(size_tag, NGH_SIZE_TAG[size_nr])){
 						decoder_state = NGH_STATE_SIZE_KNOWN;
-						rx_buf_len = 0;
+						length = 0;
 
 						// Set new packet size as soon as possible
 						ngham_action_set_packet_size(NGH_PL_PAR_SIZE[size_nr]+NGH_SIZE_TAG_SIZE);
@@ -193,13 +196,13 @@ void ngham_decode(uint8_t d){
 
 		case NGH_STATE_SIZE_KNOWN:
 			// De-scramble byte and append to buffer
-			rx_buf[rx_buf_len] = d^ccsds_poly[rx_buf_len];
-			rx_buf_len++;
+			buf[length] = d^ccsds_poly[length];
+			length++;
 
 			// Do whatever is necessary in this action
-			if (rx_buf_len == NGHAM_BYTES_TILL_ACTION_HALFWAY) ngham_action_reception_halfway();
+			if (length == NGHAM_BYTES_TILL_ACTION_HALFWAY) ngham_action_reception_halfway();
 
-			if (rx_buf_len == NGH_PL_PAR_SIZE[size_nr]){
+			if (length == NGH_PL_PAR_SIZE[size_nr]){
 				int8_t errors;
 
 				// Set packet size back to a large value
@@ -207,28 +210,22 @@ void ngham_decode(uint8_t d){
 				decoder_state = NGH_STATE_SIZE_TAG;
 
 				// Run Reed Solomon decoding, calculate packet length
-				errors = decode_rs_char(&rs_cb[size_nr], rx_buf, 0, 0);
-				rx_pkt.pl_len = NGH_PL_SIZE[size_nr] - (rx_buf[0] & 0x1F);
+				errors = decode_rs_char(&rs_cb[size_nr], buf, 0, 0);
+				rx_pkt.pl_len = NGH_PL_SIZE[size_nr] - (buf[0] & NGH_PADDING_bm);
 
-				// Check if the packet is decodeable and then if CRC is OK - todo: Check length
+				// Check if the packet is decodeable and then if CRC is OK
 				if ( (errors != -1) &&
-					 (crc_ccitt(rx_buf, rx_pkt.pl_len+1) == ((rx_buf[rx_pkt.pl_len+1]<<8) | rx_buf[rx_pkt.pl_len+2])) ){
+					 (crc_ccitt(buf, rx_pkt.pl_len+1) == ((buf[rx_pkt.pl_len+1]<<8) | buf[rx_pkt.pl_len+2])) ){
 
-					// Copy content to packet struct and pass along
+					// Copy remaining fields and pass on
 					rx_pkt.errors = errors;
-					rx_pkt.ngham_flags = (rx_buf[0] >> 5) & 0x07;
+					rx_pkt.ngham_flags = (buf[0] & NGH_FLAGS_bm) >> NGH_FLAGS_bp;
 					rx_pkt.noise = ngham_action_get_noise_floor();
 					rx_pkt.rssi = ngham_action_get_rssi();
-					uint8_t pos;
-					for (pos=0; pos<rx_pkt.pl_len; pos++){
-						rx_pkt.pl[pos] = rx_buf[pos+1];
-					}
 					ngham_action_handle_packet(PKT_CONDITION_OK, &rx_pkt);
 				}
 				// If packet decoding not was successful, count this as an error
 				else ngham_action_handle_packet(PKT_CONDITION_FAIL, NULL);
-
-
 			}
 			break;
 	}

@@ -12,12 +12,14 @@ Main features:
 - **High throughput:** As the sync word eliminates the need for a long preamble and FEC increases chance of successful packet reception, the throughput will be higher than for 9600 baud AX.25.
 - **Better spectral efficiency:** Significantly better spectral efficiency than 1200 baud AFSK, and somewhat better than 9600 baud G3RUH modulation due to the reduced deviation.
 - **More efficient channel access:** CSMA is the default access method, but TDMA with automatic time-synchronization is being developed and is tested.
-- **Clear distinction between communication layers:** The NGHam radio protocol has no addressing or other higher level information, and can be used without NGHam extensions.
+- **Clear distinction between communication layers:** The NGHam radio protocol has no addressing or other higher level information, and can be used without NGHam Extension.
 
 [Youtube video: NGHam demonstration with Owl VHF and TDMA](http://youtu.be/_96td-Y-LLA)
 
 
-![NGHam radio protocol block schematic](https://github.com/skagmo/ngham/blob/master/documentation/img/ngham_block_v4.png?raw=true)
+![NGHam radio protocol (NGHam RF) block schematic](https://github.com/skagmo/ngham/blob/master/documentation/img/ngham_block_v4.png?raw=true)
+
+![NGHam protocol stack explanation](https://github.com/skagmo/ngham/blob/master/documentation/img/ngham_protocol_stack.png?raw=true)
 
 Content:
 
@@ -32,14 +34,13 @@ Content:
 | ngham_packets.h   | Declarations of the TX/RX packet structs etc. |
 | ngham_paths.h     | User provided - MUST BE CUSTOMIZED. |
 | ngham_spp.h       | Serial port protocol for communication with the host.  |
-| ngham_spp_test.py | Python code for NGHAM SPP communication. |
 
 
 Not finished:
 
 | File/folder       | Description |
 |:-----------       |:----------- |
-| ngham_extensions.h        | An extension of the payload field in the NGHam radio protocol (enabled by a flag in the NGHam header).  |
+| ngham_extension.h        | An extension of the payload field in the NGHam radio protocol (enabled by a flag in the NGHam header).  |
 
 Usage (for NGHam RF protocol):
 

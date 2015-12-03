@@ -6,4 +6,3 @@
 #define PATH_NGHAM_PLATFORM_SPP "../owl/firmware/ngham_owl_platform_spp.h"
 // #define PATH_NGHAM_PLATFORM_SPP "platform/platform_spp.h"
 
-#define PATH_OWL_CMD_INTERPRETER "../owl/firmware/command.h"

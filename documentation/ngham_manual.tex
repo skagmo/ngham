@@ -48,7 +48,7 @@
         \\[0.2cm]
 	    \fontsize{16}{20}{\selectfont Packet Radio Protocol}
         \\[0.2cm]
-	    \fontsize{14}{20}{Revision B, \today, \url{http://github.com/skagmo/ngham/}}
+	    \fontsize{14}{20}{Revision C, \today, \url{http://github.com/skagmo/ngham/}}
         \\[0.2cm]
 	    {\color{medium-gray}\HRule}
 \vspace*{\fill}
@@ -72,6 +72,15 @@
         \item[Better spectral efficiency:] Significantly better spectral efficiency than 1200 baud AFSK, and
         somewhat better than 9600 baud G3RUH modulation due to the reduced deviation.
     \end{description}
+
+    NGHam can be divided into three sub-protocols: NGHam RF, SPP (Serial Port Protocol) and Extension.
+    \\[0.2cm]
+    \begin{figure}[H]
+	    \centering
+	    \includegraphics[width = \textwidth, trim=0cm 0cm 0cm 0cm, clip]{img/ngham_protocol_stack.pdf}
+	    \caption{NGHam protocol stack}
+	    \label{fig:ngham_stack}
+    \end{figure}
 
 	\clearpage
 
