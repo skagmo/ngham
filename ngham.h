@@ -10,6 +10,14 @@
 
 #include "ngham_packets.h" // tx_pkt_t
 
+// There are seven different sizes.
+// Each size has a correlation tag for size, a total size, a maximum payload size and a parity data size.
+#define NGH_SIZES	7
+extern const uint8_t NGH_PL_SIZE[];			// Actual payload
+extern const uint8_t NGH_PL_SIZE_FULL[];	// Size with LEN, payload and CRC
+extern const uint8_t NGH_PL_PAR_SIZE[];		// Size with RS parity added
+extern const uint8_t NGH_PAR_SIZE[];
+
 extern const uint8_t NGH_SYNC[];
 
 #define NGH_PREAMBLE_SIZE				4
@@ -27,7 +35,20 @@ extern const uint8_t NGH_SYNC[];
 void ngham_init_arrays(void);
 void ngham_deinit_arrays(void);
 void ngham_init(void);
-void ngham_encode(tx_pkt_t* p);
-void ngham_decode(uint8_t d);
+void ngham_tx_push(tx_pkt_t* p);
+
+// Takes single bytes at at time after sync word is detected
+// Requires little resources, and can run in an interrupt routine
+// 
+// Data is placed in rx_pkts_current_buf, which is a uint8_t buffer one byte larger than rx_pkt_t
+// rx_pkts_current is simply an rx_pkt_t pointer pointing at (rx_pkts_current_buf+1)
+
+void ngham_parse(uint8_t d);
+void ngham_decode(rx_pkt_t* p);
+int ngham_encode(tx_pkt_t* p);
+
+// Will decode parsed packets and encode packets ready to transmit
+// Will only process one packet at a time
+//void ngham_process_tick(void);
 
 #endif

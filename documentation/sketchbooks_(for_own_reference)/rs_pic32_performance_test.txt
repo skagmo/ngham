@@ -9,3 +9,6 @@ Encoding: 1390 ms total, 6.95 ms per packet.
 Decoding: 2137 ms total, 10.68 ms per packet.
 
 This gives a maximum bit rate of 47940 bps.
+
+At 4-GMSK, a full NGHam packet uses 274 bytes/2192 bit. Simplified, the max modulation data rate at 40 MHz is 2192 bit / 0.0193 s = ~114 kbps
+

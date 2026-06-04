@@ -6,3 +6,7 @@
 #define PATH_NGHAM_PLATFORM_SPP "../owl/firmware/ngham_owl_platform_spp.h"
 // #define PATH_NGHAM_PLATFORM_SPP "platform/platform_spp.h"
 
+#include "../owl/firmware/port.h"
+#include "../owl/firmware/config.h"
+#include "../owl/firmware/command.h"
+#include "../owl/firmware/_string.h"
