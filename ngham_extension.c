@@ -4,36 +4,48 @@
 //**************************************************************//
 
 #include "ngham_extension.h"
-
 #include "ngham_packets.h"
+
 #include "stdint.h"
 #include <string.h>
 #include <stdio.h>
 
-const char* PKT_TYPE_STRINGS[] = {
+const char* EXT_TYPE_STRINGS[] = {
 	"data", 
-	"id", 
+	"src", 
 	"stat", 
-	"sdigi", 
+	"simplehop", 
 	"pos", 
 	"toh", 
 	"dest", 
 	"cmd_req", 
-	"cmd_reply",
-	"request"
+	"text",
+	"request",
+	"car_bat",
+	"car_charge",
+	"car_trip",
+	"rx_src",
+	"ipv4_src",
+	"ipv6_src"
 };
 
-const uint16_t PKT_TYPE_SIZES[] = {
-	PKT_SIZE_VARIABLE, 
-	sizeof(ngham_id_t), 
+const uint16_t EXT_TYPE_SIZES[] = {
+    EXT_SIZE_VARIABLE,
+	sizeof(ngham_src_t), 
 	sizeof(ngham_stat_t), 
 	1, 
 	sizeof(ngham_pos_t), 
 	sizeof(ngham_toh_t), 
 	sizeof(ngham_dest_t), 
-	PKT_SIZE_VARIABLE,
-	PKT_SIZE_VARIABLE,
-	1
+    EXT_SIZE_VARIABLE,
+    EXT_SIZE_VARIABLE,
+	1,
+	sizeof(ngham_car_battery_t), 
+	sizeof(ngham_car_charge_t), 
+	sizeof(ngham_car_trip_t),
+	sizeof(ngham_rx_src_t),
+	sizeof(ngham_ipv4_src_t),
+	sizeof(ngham_ipv6_src_t)
 };
 
 //void ngh_ext_readout_example(uint8_t* d, uint16_t d_len){
@@ -42,14 +54,14 @@ const uint16_t PKT_TYPE_SIZES[] = {
 //	// ngham_extract_numpkts does necessary length check of each field
 //	for (j=0; j<ngham_extract_numpkts(d, d_len); j++){
 //		switch(d[start]){
-//			case PKT_TYPE_ID:
+//			case EXT_TYPE_SRC:
 //				{
 //					//char callsign[11];
 //					//ngham_decode_callsign(callsign, d+start+2);
 //					// Callsign string in variable "callsign"
 //				}
 //				break;
-//			case PKT_TYPE_STAT:
+//			case EXT_TYPE_STAT:
 //				{
 //					//ngham_stat_t* stat = (ngham_stat_t*)(d+start+2);
 //					// Access eg. RSSI as stat->signal-200
@@ -59,6 +71,7 @@ const uint16_t PKT_TYPE_SIZES[] = {
 //		start += d[start+1] + 2; // next start
 //	}
 //}			
+
 
 // Will set data type and length and increase tx_pkt length to fit data, 
 // then return pointer to beginning of data without actually copying any data
@@ -79,6 +92,25 @@ void ngh_ext_append_pkt(tx_pkt_t* p, uint8_t type, uint8_t* data, uint16_t size)
 	p->pl_len += 2 + size;
 }
 
+// Will set data type and length and increase tx_pkt length to fit data, 
+// then return pointer to beginning of data without actually copying any data
+uint8_t* ngh_ext_allocate_buffer(uint8_t* d, uint16_t* d_len, uint16_t d_size, uint8_t pkt_type, uint16_t data_len){
+	if ( ((*d_len) + 2 + data_len) > d_size ) return NULL;
+	d[*d_len] = pkt_type;
+	d[*d_len+1] = data_len;
+	*d_len += 2 + data_len;
+	return d+*d_len-data_len;
+}
+
+// Append extension packet with given data, type and size
+void ngh_ext_append_buffer(uint8_t* d, uint16_t* d_len, uint16_t d_size, uint8_t type, uint8_t* data, uint16_t size){
+	if ( (*d_len + 2 + size) > d_size ) return;
+	d[*d_len] = type;
+	d[*d_len+1] = size;
+	memcpy(&d[*d_len+2], data, size);
+	*d_len += 2 + size;
+}
+
 // Returns number of sub packets and verifies them
 uint16_t ngh_ext_numpkts(uint8_t* d, uint16_t d_len){
 	// Go through all sub packets
@@ -88,9 +120,9 @@ uint16_t ngh_ext_numpkts(uint8_t* d, uint16_t d_len){
 	
 	while( (d_len >= (start+2)) && (d_len >= (start+2+d[start+1])) ){
 		// If PKT_TYPE is invalid valid or packet type does not have correct length
-		if ( (d[start]>PKT_TYPES) || 
-			 ((PKT_TYPE_SIZES[d[start]] != PKT_SIZE_VARIABLE) &&
-			  (PKT_TYPE_SIZES[d[start]] != d[start+1])) ){
+        if ( (d[start]>EXT_TYPES) ||
+             ((EXT_TYPE_SIZES[d[start]] != EXT_SIZE_VARIABLE) &&
+			  (EXT_TYPE_SIZES[d[start]] != d[start+1])) ){
 			return 0;
 		}
 		packets++;
