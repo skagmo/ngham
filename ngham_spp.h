@@ -3,11 +3,11 @@
 // Licensed under LGPL.                                         //
 //**************************************************************//
 
-#include <stdint.h>
+#pragma once
 
+#include <stdint.h>
 #include "ngham_packets.h"
-#include "ngham_paths.h"
-#include PATH_NGHAM_PLATFORM_SPP
+#include "platform_ngham.h"
 
 #define NGHAM_SPP_TYPE_RX		0x00	// Packet types
 #define NGHAM_SPP_TYPE_TX		0x01	// Packet types

@@ -3,8 +3,7 @@
 // Licensed under LGPL.                                         //
 //**************************************************************//
 
-#ifndef NGHAM_H
-#define NGHAM_H
+#pragma once
 
 #include <stdint.h>
 
@@ -46,9 +45,3 @@ void ngham_tx_push(tx_pkt_t* p);
 void ngham_parse(uint8_t d);
 void ngham_decode(rx_pkt_t* p);
 int ngham_encode(tx_pkt_t* p);
-
-// Will decode parsed packets and encode packets ready to transmit
-// Will only process one packet at a time
-//void ngham_process_tick(void);
-
-#endif

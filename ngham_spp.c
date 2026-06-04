@@ -10,8 +10,7 @@
 #include <string.h> // For memcpy
 // Definition of port context port_ctx_t and port_* functions,
 // as well as packer_call which sends data to transmit chain
-#include "ngham_paths.h"
-#include PATH_NGHAM_PLATFORM_SPP
+#include "platform_ngham_spp.h"
 
 // Packet start byte definition
 #define SPP_START			0x24	

@@ -19,8 +19,7 @@
 #include "ngham_buffers.h"			// Optional ring buffers for packets pending processing
 
 // Platform specific functions
-#include "ngham_paths.h"
-#include PATH_NGHAM_PLATFORM
+#include "platform_ngham.h"
 
 const uint8_t NGH_PL_SIZE[] =      {28,   60,   92,   124,  156,  188,  220};		// Actual payload
 const uint8_t NGH_PL_SIZE_FULL[] = {31,   63,   95,   127,  159,  191,  223};		// Size with LEN, payload and CRC

@@ -3,15 +3,13 @@
 // Licensed under LGPL.                                         //
 //**************************************************************//
 
-#ifndef NGHAM_BUFFERS_H
-#define NGHAM_BUFFERS_H
+#pragma once
 
 #include <stdint.h>
 #include "ngham_packets.h" // tx_pkt_t
 
 // Platform specific functions
-#include "ngham_paths.h"
-#include PATH_NGHAM_PLATFORM
+#include "platform_ngham.h"
 
 void ngham_rx_buffer_init(void);
 void ngham_tx_buffer_init(void);
@@ -23,5 +21,3 @@ void ngham_rx_push(rx_pkt_t* p);
 // Check if TX/RX packets are waiting in ring buffers
 // Will process a maximum of one packet per tick
 void ngham_process_tick(void);
-
-#endif
